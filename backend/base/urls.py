@@ -21,6 +21,9 @@ path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_ite
    path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('products/', views.Produitlist.as_view(), name='products'),
     path('products/<int:id>/', views.ProduitDetail.as_view(), name='produit_detail'),
+
+   path('api/products/', views.api_products, name='api_products'),
+   path('api/products/<int:id>/', views.api_product_detail, name='api_product_detail'),
     
     # path('login/', views.MyTokenObtainPairView.as_view(), name='loginTokenize'),
     

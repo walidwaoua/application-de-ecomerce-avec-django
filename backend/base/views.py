@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views import View
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 
 from django.contrib.auth import login
@@ -17,7 +17,7 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 from collections import defaultdict
 from django.contrib import messages
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from .forms import CustomUserSignupForm
 
 class Home(View):
@@ -229,6 +229,46 @@ def update_cart_item(request, item_id):
     except (ValueError, TypeError):
         messages.error(request, "Quantité invalide.")
     return redirect('cart')
+
+
+def _serialize_produit(request, produit):
+    image_url = None
+    if produit.image:
+        image_url = request.build_absolute_uri(produit.image.url)
+
+    return {
+        "id": produit.id,
+        "name": produit.name,
+        "image": image_url,
+        "description": produit.description,
+        "category": produit.category,
+        "price": float(produit.price),
+        "countInStock": produit.countInStock,
+    }
+
+
+@require_GET
+def api_products(request):
+    query = request.GET.get("q", "").strip()
+    category = request.GET.get("category", "").strip()
+    produits = Produit.objects.all()
+
+    if query:
+        produits = produits.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )
+
+    if category:
+        produits = produits.filter(category__iexact=category)
+
+    data = [_serialize_produit(request, produit) for produit in produits]
+    return JsonResponse({"results": data})
+
+
+@require_GET
+def api_product_detail(request, id):
+    produit = get_object_or_404(Produit, id=id)
+    return JsonResponse(_serialize_produit(request, produit))
 
 
 
