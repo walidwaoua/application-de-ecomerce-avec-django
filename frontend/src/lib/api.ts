@@ -8,7 +8,7 @@ type ProductsResponse = {
 };
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { next: { revalidate: 30 } });
+  const response = await fetch(url, { cache: "no-store" });
 
   if (!response.ok) {
     throw new Error(`API error ${response.status} for ${url}`);
@@ -31,8 +31,12 @@ export async function getProducts(params?: {
     url.searchParams.set("category", params.category);
   }
 
-  const data = await fetchJson<ProductsResponse>(url.toString());
-  return data.results;
+  try {
+    const data = await fetchJson<ProductsResponse>(url.toString());
+    return data.results;
+  } catch {
+    return [];
+  }
 }
 
 export async function getProduct(id: string | number): Promise<Product> {

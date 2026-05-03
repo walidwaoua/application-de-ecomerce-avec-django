@@ -1,19 +1,22 @@
 import { ProductCard } from "@/components/ProductCard";
 import { getProducts } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 type CategoryPageProps = {
-  params: {
+  params: Promise<{
     category: string;
-  };
+  }>;
 };
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const category = decodeURIComponent(params.category);
-  const products = await getProducts({ category });
+  const { category } = await params;
+  const decodedCategory = decodeURIComponent(category);
+  const products = await getProducts({ category: decodedCategory });
 
   return (
     <div className="container mt-5">
-      <h2 className="text-center fw-bold mb-4">{category}</h2>
+      <h2 className="text-center fw-bold mb-4">{decodedCategory}</h2>
       {products.length > 0 ? (
         <div className="row g-4">
           {products.map((product) => (

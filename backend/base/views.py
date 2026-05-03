@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -18,7 +20,43 @@ from django.shortcuts import redirect
 from collections import defaultdict
 from django.contrib import messages
 from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.csrf import csrf_exempt
 from .forms import CustomUserSignupForm
+
+
+def _json_payload(request):
+    if not request.body:
+        return {}
+
+    try:
+        return json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return {}
+
+
+def _serialize_client(client):
+    if not client:
+        return None
+
+    return {
+        'firstname': client.firstname,
+        'lastName': client.lastName,
+        'email': client.email,
+        'phone': client.phone,
+        'address': client.address,
+        'city': client.city,
+        'postalCode': client.postalCode,
+        'country': client.country,
+    }
+
+
+def _serialize_user(user):
+    return {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'is_staff': user.is_staff,
+    }
 
 class Home(View):
     def get(self, request):
@@ -216,6 +254,47 @@ def register_view(request):
     else:
         form = CustomUserSignupForm()
     return render(request, 'register.html', {'form': form})
+
+
+@csrf_exempt
+@require_POST
+def api_login(request):
+    data = _json_payload(request)
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+
+    if not username or not password:
+        return JsonResponse({'detail': 'Username et mot de passe requis.'}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return JsonResponse({'detail': 'Identifiants invalides.'}, status=400)
+
+    login(request, user)
+    client = Client.objects.filter(user=user).first()
+    return JsonResponse({
+        'user': _serialize_user(user),
+        'client': _serialize_client(client),
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_register(request):
+    data = _json_payload(request)
+    form = CustomUserSignupForm(data)
+
+    if not form.is_valid():
+        return JsonResponse({'detail': 'Validation error', 'errors': form.errors}, status=400)
+
+    user = form.save()
+    login(request, user)
+    client = Client.objects.filter(user=user).first()
+
+    return JsonResponse({
+        'user': _serialize_user(user),
+        'client': _serialize_client(client),
+    }, status=201)
 @require_POST
 @login_required
 def update_cart_item(request, item_id):

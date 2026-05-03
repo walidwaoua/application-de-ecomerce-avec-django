@@ -22,6 +22,8 @@ path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_ite
     path('products/', views.Produitlist.as_view(), name='products'),
     path('products/<int:id>/', views.ProduitDetail.as_view(), name='produit_detail'),
 
+   path('api/auth/login/', views.api_login, name='api_login'),
+   path('api/auth/register/', views.api_register, name='api_register'),
    path('api/products/', views.api_products, name='api_products'),
    path('api/products/<int:id>/', views.api_product_detail, name='api_product_detail'),
     

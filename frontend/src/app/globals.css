@@ -28,3 +28,11 @@ body {
 .search-form input:focus {
   box-shadow: none;
 }
+
+.detail-card {
+  overflow: hidden;
+}
+
+.detail-image-wrap {
+  background: linear-gradient(140deg, #f8f9fa 0%, #eef1f4 100%);
+}
