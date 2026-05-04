@@ -35,6 +35,8 @@ class CustomUserSignupForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['firstname']
+        user.last_name = self.cleaned_data['lastName']
         if commit:
             user.save()
             # Créer le client lié

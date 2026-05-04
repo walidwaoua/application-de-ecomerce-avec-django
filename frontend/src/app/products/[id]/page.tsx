@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
 import { getProduct, getProducts } from "@/lib/api";
+import { AddToCartButton } from "@/components/AddToCartButton";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +92,7 @@ export default async function ProductDetailPage({
                 </div>
               </div>
 
-              <form className="d-flex flex-wrap align-items-end gap-3 mt-4">
+              <div className="d-flex flex-wrap align-items-end gap-3 mt-4">
                 <div>
                   <label htmlFor="quantity" className="form-label mb-0">
                     Quantite :
@@ -110,14 +111,7 @@ export default async function ProductDetailPage({
                   />
                 </div>
 
-                <button
-                  type="button"
-                  className="btn btn-outline-primary"
-                  disabled={!hasStock}
-                  title="Connexion panier en cours de migration"
-                >
-                  <i className="fas fa-cart-plus me-1" /> Ajouter au panier
-                </button>
+                <AddToCartButton productId={product.id} disabled={!hasStock} />
 
                 <Link
                   href={`/checkout?productId=${product.id}`}
@@ -126,7 +120,7 @@ export default async function ProductDetailPage({
                 >
                   Acheter maintenant
                 </Link>
-              </form>
+              </div>
 
               <div className="mt-4">
                 <Link href="/" className="btn btn-secondary">

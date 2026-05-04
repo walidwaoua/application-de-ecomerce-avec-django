@@ -1,8 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getCurrentUser, logoutUser } from "@/lib/auth";
 
 const categories = ["Canapé", "Salon", "Meuble"];
 
+type User = {
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+};
+
 export function NavBar() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const response = await getCurrentUser();
+      if (response?.user) {
+        setUser(response.user);
+      }
+      setLoading(false);
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+    window.location.href = "/";
+  };
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow">
       <div className="container-fluid">
@@ -78,16 +108,41 @@ export function NavBar() {
           </form>
 
           <ul className="navbar-nav mb-2 mb-lg-0">
-            <li className="nav-item">
-              <Link className="nav-link" href="/login">
-                <i className="fas fa-sign-in-alt me-1" /> Connexion
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" href="/register">
-                <i className="fas fa-user-plus me-1" /> Creer un compte
-              </Link>
-            </li>
+            {!loading && !user ? (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" href="/login">
+                    <i className="fas fa-sign-in-alt me-1" /> Connexion
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" href="/register">
+                    <i className="fas fa-user-plus me-1" /> Creer un compte
+                  </Link>
+                </li>
+              </>
+            ) : loading ? (
+              <li className="nav-item">
+                <span className="nav-link">Chargement...</span>
+              </li>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" href="/profile">
+                    <i className="fas fa-user me-1" /> {user?.username}
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className="nav-link btn btn-link"
+                    onClick={handleLogout}
+                    style={{ cursor: "pointer", textDecoration: "none" }}
+                  >
+                    <i className="fas fa-sign-out-alt me-1" /> Déconnexion
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>

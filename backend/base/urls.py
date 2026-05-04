@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import cart_view, login_view, signup_view, add_to_cart, checkout_view, profile_view, custom_logout_view
+from .views import cart_view, login_view, signup_view, add_to_cart, checkout_view, profile_view, custom_logout_view, api_user, api_logout
 from django.contrib.auth.views import LogoutView
 
 
@@ -24,8 +24,15 @@ path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_ite
 
    path('api/auth/login/', views.api_login, name='api_login'),
    path('api/auth/register/', views.api_register, name='api_register'),
+   path('api/auth/user/', views.api_user, name='api_user'),
+   path('api/auth/logout/', views.api_logout, name='api_logout'),
    path('api/products/', views.api_products, name='api_products'),
    path('api/products/<int:id>/', views.api_product_detail, name='api_product_detail'),
+   path('api/profile/', views.api_profile, name='api_profile'),
+   path('api/cart/', views.api_cart, name='api_cart'),
+   path('api/cart/add/', views.api_cart_add, name='api_cart_add'),
+   path('api/cart/items/<int:item_id>/', views.api_cart_item, name='api_cart_item'),
+   path('api/orders/', views.api_orders, name='api_orders'),
     
     # path('login/', views.MyTokenObtainPairView.as_view(), name='loginTokenize'),
     

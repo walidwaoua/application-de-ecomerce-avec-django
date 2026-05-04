@@ -295,6 +295,28 @@ def api_register(request):
         'user': _serialize_user(user),
         'client': _serialize_client(client),
     }, status=201)
+
+
+@require_GET
+def api_user(request):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    
+    user = request.user
+    client = Client.objects.filter(user=user).first()
+    return JsonResponse({
+        'user': _serialize_user(user),
+        'client': _serialize_client(client),
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_logout(request):
+    logout(request)
+    return JsonResponse({'detail': 'Logged out successfully'})
+
+
 @require_POST
 @login_required
 def update_cart_item(request, item_id):
@@ -349,6 +371,211 @@ def api_product_detail(request, id):
     produit = get_object_or_404(Produit, id=id)
     return JsonResponse(_serialize_produit(request, produit))
 
+
+# Profile API Endpoints
+@csrf_exempt
+def api_profile(request):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    user = request.user
+
+    if request.method == 'GET':
+        orders = Commande.objects.filter(user=user)
+        orders_data = [
+            {
+                'id': order.id,
+                'created_at': order.createdAt.isoformat(),
+                'total': float(order.totalPrice or 0),
+                'status': 'Delivered' if order.isDelivered else ('Paid' if order.isPaid else 'Pending'),
+                'items': []
+            }
+            for order in orders
+        ]
+
+        return JsonResponse({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'orders': orders_data,
+        })
+
+    elif request.method in ['PATCH', 'PUT']:
+        data = _json_payload(request)
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'email' in data:
+            user.email = data['email']
+        user.save()
+
+        orders = Commande.objects.filter(user=user)
+        orders_data = [
+            {
+                'id': order.id,
+                'created_at': order.createdAt.isoformat(),
+                'total': float(order.totalPrice or 0),
+                'status': 'Delivered' if order.isDelivered else ('Paid' if order.isPaid else 'Pending'),
+                'items': []
+            }
+            for order in orders
+        ]
+
+        return JsonResponse({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'orders': orders_data,
+        })
+
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+
+# Cart API Endpoints
+@csrf_exempt
+def api_cart(request):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    if request.method == 'GET':
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            return JsonResponse({'id': 0, 'items': [], 'total': 0})
+
+        items = CartItem.objects.filter(cart=cart)
+        items_data = []
+        total = 0
+
+        for item in items:
+            item_total = item.quantity * float(item.produit.price or 0)
+            total += item_total
+            items_data.append({
+                'id': item.id,
+                'product': _serialize_produit(request, item.produit),
+                'quantity': item.quantity,
+            })
+
+        return JsonResponse({
+            'id': cart.id,
+            'items': items_data,
+            'total': total,
+        })
+
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+@require_POST
+def api_cart_add(request):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    data = _json_payload(request)
+    product_id = data.get('product_id')
+    quantity = int(data.get('quantity', 1))
+
+    produit = get_object_or_404(Produit, id=product_id)
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart_item, created = CartItem.objects.get_or_create(cart=cart, produit=produit)
+
+    if not created:
+        cart_item.quantity += quantity
+    else:
+        cart_item.quantity = quantity
+    cart_item.save()
+
+    return JsonResponse({
+        'id': cart_item.id,
+        'product': _serialize_produit(request, produit),
+        'quantity': cart_item.quantity,
+    })
+
+
+@csrf_exempt
+def api_cart_item(request, item_id):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+
+    if request.method in ['PATCH', 'PUT']:
+        data = _json_payload(request)
+        quantity = int(data.get('quantity', cart_item.quantity))
+        if quantity > 0:
+            cart_item.quantity = quantity
+            cart_item.save()
+        return JsonResponse({
+            'id': cart_item.id,
+            'product': _serialize_produit(request, cart_item.produit),
+            'quantity': cart_item.quantity,
+        })
+
+    elif request.method == 'DELETE':
+        cart_item.delete()
+        return JsonResponse({'detail': 'Item removed'})
+
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+
+# Orders API Endpoints
+@csrf_exempt
+def api_orders(request):
+    if request.user.is_anonymous:
+        return JsonResponse({'detail': 'Authentication required'}, status=401)
+
+    if request.method == 'GET':
+        orders = Commande.objects.filter(user=request.user)
+        orders_data = []
+
+        for order in orders:
+            orders_data.append({
+                'id': order.id,
+                'created_at': order.createdAt.isoformat(),
+                'total': float(order.totalPrice or 0),
+                'status': 'Delivered' if order.isDelivered else ('Paid' if order.isPaid else 'Pending'),
+                'items': [],
+            })
+
+        return JsonResponse(orders_data, safe=False)
+
+    elif request.method == 'POST':
+        data = _json_payload(request)
+        cart = Cart.objects.filter(user=request.user).first()
+        cart_items = CartItem.objects.filter(cart=cart) if cart else []
+
+        if not cart_items:
+            return JsonResponse({'detail': 'Cart is empty'}, status=400)
+
+        total = sum(item.quantity * float(item.produit.price or 0) for item in cart_items)
+
+        order = Commande.objects.create(
+            user=request.user,
+            shippingAddress=data.get('address', ''),
+            city=data.get('city', ''),
+            postalCode=data.get('postal_code', ''),
+            country=data.get('country', ''),
+            totalPrice=total,
+            is_validated=True,
+        )
+
+        # Clear cart
+        if cart:
+            CartItem.objects.filter(cart=cart).delete()
+
+        return JsonResponse({
+            'id': order.id,
+            'created_at': order.createdAt.isoformat(),
+            'total': float(order.totalPrice or 0),
+            'status': 'Pending',
+            'items': [],
+        }, status=201)
+
+    return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
 # Create your views here.

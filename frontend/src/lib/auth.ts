@@ -60,3 +60,37 @@ export function registerUser(payload: {
 }) {
   return postAuth<AuthResponse>("/api/auth/register/", payload);
 }
+
+export async function getCurrentUser(): Promise<AuthResponse | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/user/`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as AuthResponse;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function logoutUser(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/api/auth/logout/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
+}
