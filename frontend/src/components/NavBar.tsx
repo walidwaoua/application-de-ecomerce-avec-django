@@ -127,6 +127,13 @@ export function NavBar() {
               </li>
             ) : (
               <>
+                {user?.is_staff && (
+                  <li className="nav-item">
+                    <Link className="nav-link" href="/admin">
+                      <i className="fas fa-cog me-1" /> Admin
+                    </Link>
+                  </li>
+                )}
                 <li className="nav-item">
                   <Link className="nav-link" href="/profile">
                     <i className="fas fa-user me-1" /> {user?.username}

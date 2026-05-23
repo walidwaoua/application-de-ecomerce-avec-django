@@ -33,6 +33,12 @@ path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_ite
    path('api/cart/add/', views.api_cart_add, name='api_cart_add'),
    path('api/cart/items/<int:item_id>/', views.api_cart_item, name='api_cart_item'),
    path('api/orders/', views.api_orders, name='api_orders'),
+   path('api/admin/stats/', views.api_admin_stats, name='api_admin_stats'),
+   path('api/admin/products/', views.api_admin_products, name='api_admin_products'),
+   path('api/admin/products/<int:id>/', views.api_admin_product_detail, name='api_admin_product_detail'),
+   path('api/admin/orders/', views.api_admin_orders, name='api_admin_orders'),
+   path('api/admin/orders/<int:id>/', views.api_admin_order_detail, name='api_admin_order_detail'),
+   path('api/admin/users/', views.api_admin_users, name='api_admin_users'),
     
     # path('login/', views.MyTokenObtainPairView.as_view(), name='loginTokenize'),
     
