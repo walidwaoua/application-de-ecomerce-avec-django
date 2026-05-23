@@ -231,19 +231,23 @@ export default function ProfilePage() {
                           <td>{order.total.toFixed(2)} DH</td>
                           <td>{new Date(order.created_at).toLocaleDateString('fr-FR')}</td>
                           <td>
-                            {order.is_validated
-                              ? <i className="fas fa-check-circle text-success" />
-                              : <i className="fas fa-hourglass-half text-warning" />}
+                            {order.isCancelled
+                              ? <span className="badge bg-danger" style={{ fontSize: 11 }}>Annulée</span>
+                              : order.is_validated
+                                ? <i className="fas fa-check-circle text-success" />
+                                : <i className="fas fa-hourglass-half text-warning" />}
                           </td>
                           <td>
-                            {order.isPaid
-                              ? <i className="fas fa-money-bill text-success" />
-                              : <i className="fas fa-money-check-alt text-muted" />}
+                            {order.isCancelled ? '—'
+                              : order.isPaid
+                                ? <i className="fas fa-money-bill text-success" />
+                                : <i className="fas fa-money-check-alt text-muted" />}
                           </td>
                           <td>
-                            {order.isDelivered
-                              ? <i className="fas fa-truck text-primary" />
-                              : <i className="fas fa-box-open text-secondary" />}
+                            {order.isCancelled ? '—'
+                              : order.isDelivered
+                                ? <i className="fas fa-truck text-primary" />
+                                : <i className="fas fa-box-open text-secondary" />}
                           </td>
                         </tr>
                       ))}

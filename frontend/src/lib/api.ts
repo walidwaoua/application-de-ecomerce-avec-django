@@ -27,6 +27,7 @@ export type Order = {
   is_validated: boolean;
   isPaid: boolean;
   isDelivered: boolean;
+  isCancelled: boolean;
   items: CartItem[];
 };
 
@@ -182,6 +183,7 @@ export type AdminOrder = {
   is_validated: boolean;
   isPaid: boolean;
   isDelivered: boolean;
+  isCancelled: boolean;
   shippingAddress: string;
   city: string;
   country: string;

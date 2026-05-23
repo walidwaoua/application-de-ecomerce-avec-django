@@ -392,6 +392,7 @@ def api_profile(request):
                 'is_validated': order.is_validated,
                 'isPaid': order.isPaid,
                 'isDelivered': order.isDelivered,
+                'isCancelled': order.isCancelled,
                 'items': [],
             }
             for order in orders
@@ -652,6 +653,7 @@ def api_admin_orders(request):
             'is_validated': o.is_validated,
             'isPaid': o.isPaid,
             'isDelivered': o.isDelivered,
+            'isCancelled': o.isCancelled,
             'shippingAddress': o.shippingAddress,
             'city': o.city,
             'country': o.country,
@@ -675,10 +677,13 @@ def api_admin_order_detail(request, id):
             order.isDelivered = data['isDelivered']
         if 'is_validated' in data:
             order.is_validated = data['is_validated']
+        if 'isCancelled' in data:
+            order.isCancelled = data['isCancelled']
         order.save()
         return JsonResponse({
             'id': order.id, 'isPaid': order.isPaid,
             'isDelivered': order.isDelivered, 'is_validated': order.is_validated,
+            'isCancelled': order.isCancelled,
         })
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)

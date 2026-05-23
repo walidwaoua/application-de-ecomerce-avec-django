@@ -17,7 +17,7 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'delivered'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'delivered' | 'cancelled'>('all');
 
   useEffect(() => {
     adminApi.orders().then(r => setOrders(r.results)).finally(() => setLoading(false));
@@ -31,9 +31,10 @@ export default function AdminOrders() {
   };
 
   const filtered = orders.filter(o => {
-    if (filter === 'pending') return !o.is_validated;
-    if (filter === 'paid') return o.isPaid;
-    if (filter === 'delivered') return o.isDelivered;
+    if (filter === 'pending')   return !o.is_validated && !o.isCancelled;
+    if (filter === 'paid')      return o.isPaid && !o.isCancelled;
+    if (filter === 'delivered') return o.isDelivered && !o.isCancelled;
+    if (filter === 'cancelled') return o.isCancelled;
     return true;
   });
 
@@ -45,14 +46,22 @@ export default function AdminOrders() {
           <p className="text-muted mb-0" style={{ fontSize: 13 }}>{orders.length} commande(s)</p>
         </div>
         <div className="d-flex gap-2">
-          {(['all', 'pending', 'paid', 'delivered'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
+          {([
+            { key: 'all',       label: 'Tout' },
+            { key: 'pending',   label: 'En attente' },
+            { key: 'paid',      label: 'Payées' },
+            { key: 'delivered', label: 'Livrées' },
+            { key: 'cancelled', label: 'Annulées' },
+          ] as const).map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
               style={{
                 fontSize: 12, fontWeight: 500, padding: '5px 12px', borderRadius: 6, border: 'none',
-                background: filter === f ? '#6366f1' : '#f1f5f9',
-                color: filter === f ? '#fff' : '#64748b',
+                background: filter === f.key
+                  ? f.key === 'cancelled' ? '#ef4444' : '#6366f1'
+                  : '#f1f5f9',
+                color: filter === f.key ? '#fff' : '#64748b',
               }}>
-              {f === 'all' ? 'Tout' : f === 'pending' ? 'En attente' : f === 'paid' ? 'Payées' : 'Livrées'}
+              {f.label}
             </button>
           ))}
         </div>
@@ -74,11 +83,15 @@ export default function AdminOrders() {
                   <th>Validée</th>
                   <th>Payée</th>
                   <th>Livrée</th>
+                  <th>Annulée</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(o => (
-                  <tr key={o.id} style={{ opacity: updating === o.id ? .5 : 1 }}>
+                  <tr key={o.id} style={{
+                    opacity: updating === o.id ? .5 : 1,
+                    background: o.isCancelled ? '#fff5f5' : undefined,
+                  }}>
                     <td className="ps-4 fw-semibold">#{o.id}</td>
                     <td>{o.user}</td>
                     <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -87,18 +100,29 @@ export default function AdminOrders() {
                     <td className="fw-semibold">{o.total.toFixed(2)} DH</td>
                     <td style={{ color: '#64748b' }}>{new Date(o.created_at).toLocaleDateString('fr-FR')}</td>
                     <td>
-                      <button className="btn btn-sm p-0 border-0 bg-transparent" onClick={() => toggle(o, 'is_validated')}>
+                      <button className="btn btn-sm p-0 border-0 bg-transparent" disabled={o.isCancelled} onClick={() => toggle(o, 'is_validated')}>
                         <Badge on={o.is_validated} onLabel="✓ Oui" offLabel="En attente" />
                       </button>
                     </td>
                     <td>
-                      <button className="btn btn-sm p-0 border-0 bg-transparent" onClick={() => toggle(o, 'isPaid')}>
+                      <button className="btn btn-sm p-0 border-0 bg-transparent" disabled={o.isCancelled} onClick={() => toggle(o, 'isPaid')}>
                         <Badge on={o.isPaid} onLabel="✓ Payée" offLabel="Non payée" />
                       </button>
                     </td>
                     <td>
-                      <button className="btn btn-sm p-0 border-0 bg-transparent" onClick={() => toggle(o, 'isDelivered')}>
+                      <button className="btn btn-sm p-0 border-0 bg-transparent" disabled={o.isCancelled} onClick={() => toggle(o, 'isDelivered')}>
                         <Badge on={o.isDelivered} onLabel="✓ Livrée" offLabel="En cours" />
+                      </button>
+                    </td>
+                    <td>
+                      <button className="btn btn-sm p-0 border-0 bg-transparent" onClick={() => toggle(o, 'isCancelled')}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                          background: o.isCancelled ? '#fef2f2' : '#f8fafc',
+                          color: o.isCancelled ? '#dc2626' : '#94a3b8',
+                        }}>
+                          {o.isCancelled ? '✕ Annulée' : 'Non annulée'}
+                        </span>
                       </button>
                     </td>
                   </tr>
