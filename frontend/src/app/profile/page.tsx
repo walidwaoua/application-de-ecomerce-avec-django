@@ -21,20 +21,21 @@ export default function ProfilePage() {
     async function fetchProfile() {
       try {
         setLoading(true);
-        const profileData = await getUserProfile();
-        setProfile(profileData);
+        const data = await getUserProfile();
+        setProfile(data);
         setFormData({
-          first_name: profileData.first_name,
-          last_name: profileData.last_name,
-          email: profileData.email,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        const msg = err instanceof Error ? err.message : '';
+        if (msg.includes('401')) { router.push('/login'); return; }
+        setError(msg || 'Impossible de charger le profil');
       } finally {
         setLoading(false);
       }
     }
-
     fetchProfile();
   }, []);
 
@@ -45,14 +46,13 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       setSubmitting(true);
-      const updatedProfile = await updateUserProfile(formData);
-      setProfile(updatedProfile);
+      const updated = await updateUserProfile(formData);
+      setProfile(updated);
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
       setSubmitting(false);
     }
@@ -60,11 +60,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="container mt-5">
-        <div className="text-center">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+      <div className="container mt-5 text-center">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Chargement...</span>
         </div>
       </div>
     );
@@ -87,20 +85,23 @@ export default function ProfilePage() {
     );
   }
 
+  const client = profile.client;
+
   return (
     <div className="container mt-5">
-      <h2 className="text-center fw-bold mb-4">Mon Profil</h2>
+      <h2 className="fw-bold mb-4 text-center">
+        <i className="fas fa-user-circle me-2 text-primary" />
+        Mon Profil
+      </h2>
 
-      <div className="row">
+      <div className="row g-4">
+        {/* Personal info */}
         <div className="col-md-6">
-          <div className="card mb-4">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Informations personnelles</h5>
+          <div className="card shadow-sm border-0 h-100">
+            <div className="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i className="fas fa-id-card me-2" />Informations personnelles</span>
               {!editing && (
-                <button 
-                  className="btn btn-sm btn-primary"
-                  onClick={() => setEditing(true)}
-                >
+                <button className="btn btn-sm btn-light" onClick={() => setEditing(true)}>
                   Modifier
                 </button>
               )}
@@ -109,50 +110,40 @@ export default function ProfilePage() {
               {editing ? (
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
-                    <label htmlFor="first_name" className="form-label">Prénom</label>
-                    <input 
+                    <label className="form-label">Prénom</label>
+                    <input
                       type="text"
-                      id="first_name"
                       name="first_name"
                       className="form-control"
                       value={formData.first_name}
                       onChange={handleInputChange}
                     />
                   </div>
-
                   <div className="mb-3">
-                    <label htmlFor="last_name" className="form-label">Nom</label>
-                    <input 
+                    <label className="form-label">Nom</label>
+                    <input
                       type="text"
-                      id="last_name"
                       name="last_name"
                       className="form-control"
                       value={formData.last_name}
                       onChange={handleInputChange}
                     />
                   </div>
-
                   <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email</label>
-                    <input 
+                    <label className="form-label">Email</label>
+                    <input
                       type="email"
-                      id="email"
                       name="email"
                       className="form-control"
                       value={formData.email}
                       onChange={handleInputChange}
                     />
                   </div>
-
                   <div className="d-flex gap-2">
-                    <button 
-                      type="submit" 
-                      className="btn btn-success"
-                      disabled={submitting}
-                    >
+                    <button type="submit" className="btn btn-success" disabled={submitting}>
                       {submitting ? 'Sauvegarde...' : 'Sauvegarder'}
                     </button>
-                    <button 
+                    <button
                       type="button"
                       className="btn btn-outline-secondary"
                       onClick={() => setEditing(false)}
@@ -161,43 +152,106 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 </form>
+              ) : client ? (
+                <div>
+                  <p className="mb-2">
+                    <i className="fas fa-user me-2 text-muted" />
+                    <strong>Nom :</strong> {client.lastName}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-user me-2 text-muted" />
+                    <strong>Prénom :</strong> {client.firstname}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-envelope me-2 text-muted" />
+                    <strong>Email :</strong> {client.email}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-phone me-2 text-muted" />
+                    <strong>Téléphone :</strong> {client.phone || '—'}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-map-marker-alt me-2 text-muted" />
+                    <strong>Adresse :</strong> {client.address || '—'}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-city me-2 text-muted" />
+                    <strong>Ville :</strong> {client.city || '—'}
+                  </p>
+                  <p className="mb-2">
+                    <i className="fas fa-mail-bulk me-2 text-muted" />
+                    <strong>Code postal :</strong> {client.postalCode || '—'}
+                  </p>
+                  <p className="mb-0">
+                    <i className="fas fa-globe me-2 text-muted" />
+                    <strong>Pays :</strong> {client.country || '—'}
+                  </p>
+                </div>
               ) : (
                 <div>
-                  <p className="mb-2"><strong>Prénom:</strong> {profile.first_name}</p>
-                  <p className="mb-2"><strong>Nom:</strong> {profile.last_name}</p>
-                  <p className="mb-0"><strong>Email:</strong> {profile.email}</p>
+                  <p className="mb-2">
+                    <strong>Prénom :</strong> {profile.first_name || '—'}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Nom :</strong> {profile.last_name || '—'}
+                  </p>
+                  <p className="mb-0">
+                    <strong>Email :</strong> {profile.email}
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
+        {/* Orders */}
         <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0">Mes commandes</h5>
+          <div className="card shadow-sm border-0 h-100">
+            <div className="card-header bg-dark text-white fw-bold">
+              <i className="fas fa-box me-2" />Mes Commandes
             </div>
-            <div className="card-body">
+            <div className="card-body p-0">
               {profile.orders && profile.orders.length > 0 ? (
-                <div className="list-group list-group-flush">
-                  {profile.orders.map(order => (
-                    <div key={order.id} className="list-group-item">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h6 className="mb-0">Commande #{order.id}</h6>
-                        <span className="badge bg-info">{order.status}</span>
-                      </div>
-                      <p className="text-muted small mb-2">
-                        {new Date(order.created_at).toLocaleDateString('fr-FR')}
-                      </p>
-                      <div className="d-flex justify-content-between">
-                        <span>{order.items.length} article(s)</span>
-                        <strong>${order.total.toFixed(2)}</strong>
-                      </div>
-                    </div>
-                  ))}
+                <div className="table-responsive">
+                  <table className="table table-hover mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Total</th>
+                        <th>Date</th>
+                        <th>Validée</th>
+                        <th>Payée</th>
+                        <th>Livrée</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profile.orders.map(order => (
+                        <tr key={order.id}>
+                          <td>#{order.id}</td>
+                          <td>{order.total.toFixed(2)} DH</td>
+                          <td>{new Date(order.created_at).toLocaleDateString('fr-FR')}</td>
+                          <td>
+                            {order.is_validated
+                              ? <i className="fas fa-check-circle text-success" />
+                              : <i className="fas fa-hourglass-half text-warning" />}
+                          </td>
+                          <td>
+                            {order.isPaid
+                              ? <i className="fas fa-money-bill text-success" />
+                              : <i className="fas fa-money-check-alt text-muted" />}
+                          </td>
+                          <td>
+                            {order.isDelivered
+                              ? <i className="fas fa-truck text-primary" />
+                              : <i className="fas fa-box-open text-secondary" />}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
-                <p className="text-muted">Aucune commande pour le moment.</p>
+                <div className="alert alert-info m-3">Aucune commande pour l&apos;instant.</div>
               )}
             </div>
           </div>

@@ -24,7 +24,21 @@ export type Order = {
   created_at: string;
   total: number;
   status: string;
+  is_validated: boolean;
+  isPaid: boolean;
+  isDelivered: boolean;
   items: CartItem[];
+};
+
+export type ClientProfile = {
+  firstname: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
 };
 
 export type UserProfile = {
@@ -33,6 +47,7 @@ export type UserProfile = {
   email: string;
   first_name: string;
   last_name: string;
+  client: ClientProfile | null;
   orders: Order[];
 };
 
@@ -114,7 +129,12 @@ export async function removeFromCart(itemId: number): Promise<void> {
 }
 
 // Checkout/Order APIs
-export async function createOrder(data: { address: string; phone: string }): Promise<Order> {
+export async function createOrder(data: {
+  address: string;
+  city: string;
+  postal_code: string;
+  country: string;
+}): Promise<Order> {
   const url = `${API_BASE_URL}/api/orders/`;
   return fetchJson<Order>(url, {
     method: "POST",

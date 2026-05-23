@@ -18,8 +18,7 @@ export default function LoginPage() {
 
     try {
       await loginUser({ username, password });
-      router.push("/");
-      router.refresh();
+      window.location.href = "/";
     } catch (caughtError) {
       const message =
         typeof caughtError === "object" && caughtError && "detail" in caughtError

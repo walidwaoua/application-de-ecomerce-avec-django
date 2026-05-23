@@ -380,27 +380,34 @@ def api_profile(request):
 
     user = request.user
 
-    if request.method == 'GET':
-        orders = Commande.objects.filter(user=user)
+    def _build_profile_response(u):
+        client = Client.objects.filter(user=u).first()
+        orders = Commande.objects.filter(user=u)
         orders_data = [
             {
                 'id': order.id,
                 'created_at': order.createdAt.isoformat(),
                 'total': float(order.totalPrice or 0),
                 'status': 'Delivered' if order.isDelivered else ('Paid' if order.isPaid else 'Pending'),
-                'items': []
+                'is_validated': order.is_validated,
+                'isPaid': order.isPaid,
+                'isDelivered': order.isDelivered,
+                'items': [],
             }
             for order in orders
         ]
-
-        return JsonResponse({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
+        return {
+            'id': u.id,
+            'username': u.username,
+            'email': u.email,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'client': _serialize_client(client),
             'orders': orders_data,
-        })
+        }
+
+    if request.method == 'GET':
+        return JsonResponse(_build_profile_response(user))
 
     elif request.method in ['PATCH', 'PUT']:
         data = _json_payload(request)
@@ -411,27 +418,7 @@ def api_profile(request):
         if 'email' in data:
             user.email = data['email']
         user.save()
-
-        orders = Commande.objects.filter(user=user)
-        orders_data = [
-            {
-                'id': order.id,
-                'created_at': order.createdAt.isoformat(),
-                'total': float(order.totalPrice or 0),
-                'status': 'Delivered' if order.isDelivered else ('Paid' if order.isPaid else 'Pending'),
-                'items': []
-            }
-            for order in orders
-        ]
-
-        return JsonResponse({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'orders': orders_data,
-        })
+        return JsonResponse(_build_profile_response(user))
 
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 

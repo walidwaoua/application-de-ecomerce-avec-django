@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Product } from "@/types/product";
+import { AddToCartButton } from "./AddToCartButton";
 
 type ProductCardProps = {
   product: Product;
@@ -34,13 +35,7 @@ export function ProductCard({ product, showActions = false }: ProductCardProps) 
               Voir les details
             </Link>
 
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm"
-              disabled
-            >
-              🛒 Ajouter au panier
-            </button>
+            <AddToCartButton productId={product.id} />
 
             <Link
               href={`/checkout?productId=${product.id}`}
