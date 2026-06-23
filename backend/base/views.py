@@ -458,45 +458,37 @@ def api_profile(request):
 
 
 # Cart API Endpoints
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def api_cart(request):
-    if request.user.is_anonymous:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
+    cart = Cart.objects.filter(user=request.user).first()
+    if not cart:
+        return JsonResponse({'id': 0, 'items': [], 'total': 0})
 
-    if request.method == 'GET':
-        cart = Cart.objects.filter(user=request.user).first()
-        if not cart:
-            return JsonResponse({'id': 0, 'items': [], 'total': 0})
+    items = CartItem.objects.filter(cart=cart)
+    items_data = []
+    total = 0
 
-        items = CartItem.objects.filter(cart=cart)
-        items_data = []
-        total = 0
-
-        for item in items:
-            item_total = item.quantity * float(item.produit.price or 0)
-            total += item_total
-            items_data.append({
-                'id': item.id,
-                'product': _serialize_produit(request, item.produit),
-                'quantity': item.quantity,
-            })
-
-        return JsonResponse({
-            'id': cart.id,
-            'items': items_data,
-            'total': total,
+    for item in items:
+        item_total = item.quantity * float(item.produit.price or 0)
+        total += item_total
+        items_data.append({
+            'id': item.id,
+            'product': _serialize_produit(request, item.produit),
+            'quantity': item.quantity,
         })
 
-    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    return JsonResponse({
+        'id': cart.id,
+        'items': items_data,
+        'total': total,
+    })
 
 
-@csrf_exempt
-@require_POST
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def api_cart_add(request):
-    if request.user.is_anonymous:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
-
-    data = _json_payload(request)
+    data = request.data
     product_id = data.get('product_id')
     quantity = int(data.get('quantity', 1))
 
@@ -517,15 +509,13 @@ def api_cart_add(request):
     })
 
 
-@csrf_exempt
+@api_view(['PATCH', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
 def api_cart_item(request, item_id):
-    if request.user.is_anonymous:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
-
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
 
     if request.method in ['PATCH', 'PUT']:
-        data = _json_payload(request)
+        data = request.data
         quantity = int(data.get('quantity', cart_item.quantity))
         if quantity > 0:
             cart_item.quantity = quantity
@@ -536,7 +526,7 @@ def api_cart_item(request, item_id):
             'quantity': cart_item.quantity,
         })
 
-    elif request.method == 'DELETE':
+    if request.method == 'DELETE':
         cart_item.delete()
         return JsonResponse({'detail': 'Item removed'})
 
@@ -544,11 +534,9 @@ def api_cart_item(request, item_id):
 
 
 # Orders API Endpoints
-@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def api_orders(request):
-    if request.user.is_anonymous:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
-
     if request.method == 'GET':
         orders = Commande.objects.filter(user=request.user)
         orders_data = []
@@ -564,39 +552,36 @@ def api_orders(request):
 
         return JsonResponse(orders_data, safe=False)
 
-    elif request.method == 'POST':
-        data = _json_payload(request)
-        cart = Cart.objects.filter(user=request.user).first()
-        cart_items = CartItem.objects.filter(cart=cart) if cart else []
+    data = request.data
+    cart = Cart.objects.filter(user=request.user).first()
+    cart_items = CartItem.objects.filter(cart=cart) if cart else []
 
-        if not cart_items:
-            return JsonResponse({'detail': 'Cart is empty'}, status=400)
+    if not cart_items:
+        return JsonResponse({'detail': 'Cart is empty'}, status=400)
 
-        total = sum(item.quantity * float(item.produit.price or 0) for item in cart_items)
+    total = sum(item.quantity * float(item.produit.price or 0) for item in cart_items)
 
-        order = Commande.objects.create(
-            user=request.user,
-            shippingAddress=data.get('address', ''),
-            city=data.get('city', ''),
-            postalCode=data.get('postal_code', ''),
-            country=data.get('country', ''),
-            totalPrice=total,
-            is_validated=True,
-        )
+    order = Commande.objects.create(
+        user=request.user,
+        shippingAddress=data.get('address', ''),
+        city=data.get('city', ''),
+        postalCode=data.get('postal_code', ''),
+        country=data.get('country', ''),
+        totalPrice=total,
+        is_validated=True,
+    )
 
-        # Clear cart
-        if cart:
-            CartItem.objects.filter(cart=cart).delete()
+    # Clear cart
+    if cart:
+        CartItem.objects.filter(cart=cart).delete()
 
-        return JsonResponse({
-            'id': order.id,
-            'created_at': order.createdAt.isoformat(),
-            'total': float(order.totalPrice or 0),
-            'status': 'Pending',
-            'items': [],
-        }, status=201)
-
-    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    return JsonResponse({
+        'id': order.id,
+        'created_at': order.createdAt.isoformat(),
+        'total': float(order.totalPrice or 0),
+        'status': 'Pending',
+        'items': [],
+    }, status=201)
 
 
 # ─── Admin API ────────────────────────────────────────────────────────────────

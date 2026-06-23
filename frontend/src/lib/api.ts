@@ -133,9 +133,8 @@ export async function updateCartItem(itemId: number, quantity: number): Promise<
 
 export async function removeFromCart(itemId: number): Promise<void> {
   const url = `${API_BASE_URL}/api/cart/items/${itemId}/`;
-  await fetch(url, { 
-    method: "DELETE", 
-    credentials: "include"
+  await fetchJson<void>(url, {
+    method: "DELETE",
   });
 }
 
