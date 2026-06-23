@@ -1,4 +1,5 @@
 import { Product } from "@/types/product";
+import { getAccessToken } from "./auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -53,10 +54,19 @@ export type UserProfile = {
 };
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const accessToken = getAccessToken();
+  
+  const headers = new Headers(options?.headers || {});
+  
+  // Add JWT token if available
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
   const response = await fetch(url, { 
     cache: "no-store",
-    credentials: "include",
-    ...options 
+    ...options,
+    headers,
   });
 
   if (!response.ok) {

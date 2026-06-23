@@ -17,15 +17,40 @@ export function NavBar() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = async () => {
+    const response = await getCurrentUser();
+    if (response?.user) {
+      setUser(response.user);
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchUser = async () => {
-      const response = await getCurrentUser();
-      if (response?.user) {
-        setUser(response.user);
-      }
-      setLoading(false);
-    };
     fetchUser();
+
+    // Écouter quand les tokens changent (login/logout/autre tab)
+    const handleAuthChange = () => {
+      fetchUser();
+    };
+
+    // Event custom quand setTokens() ou clearTokens() est appelé
+    window.addEventListener("auth-tokens-changed", handleAuthChange);
+
+    // Écouter les changements de token depuis un autre tab/fenêtre
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "access_token") {
+        fetchUser();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("auth-tokens-changed", handleAuthChange);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const handleLogout = async () => {

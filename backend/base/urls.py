@@ -26,6 +26,7 @@ path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_ite
    path('api/auth/register/', views.api_register, name='api_register'),
    path('api/auth/user/', views.api_user, name='api_user'),
    path('api/auth/logout/', views.api_logout, name='api_logout'),
+   path('api/debug/cookies/', views.api_debug_cookies, name='api_debug_cookies'),
    path('api/products/', views.api_products, name='api_products'),
    path('api/products/<int:id>/', views.api_product_detail, name='api_product_detail'),
    path('api/profile/', views.api_profile, name='api_profile'),

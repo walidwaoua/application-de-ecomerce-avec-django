@@ -18,7 +18,12 @@ export default function LoginPage() {
 
     try {
       await loginUser({ username, password });
-      window.location.href = "/";
+      // Attendre un peu pour que le cookie soit sauvegardé
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Rediriger avec le router au lieu de window.location
+      router.push("/");
+      // Forcer un refresh pour que NavBar vérifie la session
+      router.refresh();
     } catch (caughtError) {
       const message =
         typeof caughtError === "object" && caughtError && "detail" in caughtError
