@@ -411,11 +411,9 @@ def api_product_detail(request, id):
 
 
 # Profile API Endpoints
-@csrf_exempt
+@api_view(['GET', 'PATCH', 'PUT'])
+@permission_classes([IsAuthenticated])
 def api_profile(request):
-    if request.user.is_anonymous:
-        return JsonResponse({'detail': 'Authentication required'}, status=401)
-
     user = request.user
 
     def _build_profile_response(u):
@@ -448,18 +446,15 @@ def api_profile(request):
     if request.method == 'GET':
         return JsonResponse(_build_profile_response(user))
 
-    elif request.method in ['PATCH', 'PUT']:
-        data = _json_payload(request)
-        if 'first_name' in data:
-            user.first_name = data['first_name']
-        if 'last_name' in data:
-            user.last_name = data['last_name']
-        if 'email' in data:
-            user.email = data['email']
-        user.save()
-        return JsonResponse(_build_profile_response(user))
-
-    return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    data = request.data
+    if 'first_name' in data:
+        user.first_name = data['first_name']
+    if 'last_name' in data:
+        user.last_name = data['last_name']
+    if 'email' in data:
+        user.email = data['email']
+    user.save()
+    return JsonResponse(_build_profile_response(user))
 
 
 # Cart API Endpoints
