@@ -144,6 +144,8 @@ export async function createOrder(data: {
   city: string;
   postal_code: string;
   country: string;
+  product_id?: number;
+  quantity?: number;
 }): Promise<Order> {
   const url = `${API_BASE_URL}/api/orders/`;
   return fetchJson<Order>(url, {

@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 
 from django.contrib.auth import login
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 #from .forms import SignUpForm
 from .models import Produit
@@ -380,6 +380,7 @@ def _serialize_produit(request, produit):
         "name": produit.name,
         "image": image_url,
         "description": produit.description,
+        "brand": produit.brand,
         "category": produit.category,
         "price": float(produit.price),
         "countInStock": produit.countInStock,
@@ -553,6 +554,41 @@ def api_orders(request):
         return JsonResponse(orders_data, safe=False)
 
     data = request.data
+    product_id = data.get('product_id')
+
+    if product_id:
+        produit = get_object_or_404(Produit, id=product_id)
+        quantity = int(data.get('quantity', 1) or 1)
+
+        if quantity < 1:
+            return JsonResponse({'detail': 'Invalid quantity'}, status=400)
+
+        if produit.countInStock is not None and produit.countInStock < quantity:
+            return JsonResponse({'detail': 'Not enough stock'}, status=400)
+
+        total = quantity * float(produit.price or 0)
+        order = Commande.objects.create(
+            user=request.user,
+            shippingAddress=data.get('address', ''),
+            city=data.get('city', ''),
+            postalCode=data.get('postal_code', ''),
+            country=data.get('country', ''),
+            totalPrice=total,
+            is_validated=True,
+        )
+
+        return JsonResponse({
+            'id': order.id,
+            'created_at': order.createdAt.isoformat(),
+            'total': float(order.totalPrice or 0),
+            'status': 'Pending',
+            'items': [{
+                'id': 0,
+                'product': _serialize_produit(request, produit),
+                'quantity': quantity,
+            }],
+        }, status=201)
+
     cart = Cart.objects.filter(user=request.user).first()
     cart_items = CartItem.objects.filter(cart=cart) if cart else []
 
@@ -592,10 +628,9 @@ def _staff_required(request):
     return None
 
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def api_admin_stats(request):
-    err = _staff_required(request)
-    if err: return err
     from django.contrib.auth.models import User as AuthUser
     return JsonResponse({
         'total_products': Produit.objects.count(),
@@ -608,17 +643,15 @@ def api_admin_stats(request):
     })
 
 
-@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes([IsAdminUser])
 def api_admin_products(request):
-    err = _staff_required(request)
-    if err: return err
-
     if request.method == 'GET':
         produits = Produit.objects.all().order_by('-createdAt')
         return JsonResponse({'results': [_serialize_produit(request, p) for p in produits]})
 
     if request.method == 'POST':
-        data = _json_payload(request)
+        data = request.data
         p = Produit.objects.create(
             name=data.get('name', ''),
             brand=data.get('brand', ''),
@@ -632,17 +665,16 @@ def api_admin_products(request):
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
-@csrf_exempt
+@api_view(['GET', 'PATCH', 'PUT', 'DELETE'])
+@permission_classes([IsAdminUser])
 def api_admin_product_detail(request, id):
-    err = _staff_required(request)
-    if err: return err
     produit = get_object_or_404(Produit, id=id)
 
     if request.method == 'GET':
         return JsonResponse(_serialize_produit(request, produit))
 
     if request.method in ['PATCH', 'PUT']:
-        data = _json_payload(request)
+        data = request.data
         for field in ['name', 'brand', 'category', 'description', 'price', 'countInStock']:
             if field in data:
                 setattr(produit, field, data[field])
@@ -656,11 +688,9 @@ def api_admin_product_detail(request, id):
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def api_admin_orders(request):
-    err = _staff_required(request)
-    if err: return err
-
     if request.method == 'GET':
         orders = Commande.objects.select_related('user').order_by('-createdAt')
         data = [{
@@ -681,14 +711,13 @@ def api_admin_orders(request):
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
-@csrf_exempt
+@api_view(['PATCH', 'PUT'])
+@permission_classes([IsAdminUser])
 def api_admin_order_detail(request, id):
-    err = _staff_required(request)
-    if err: return err
     order = get_object_or_404(Commande, id=id)
 
     if request.method in ['PATCH', 'PUT']:
-        data = _json_payload(request)
+        data = request.data
         if 'isPaid' in data:
             order.isPaid = data['isPaid']
         if 'isDelivered' in data:
@@ -707,11 +736,9 @@ def api_admin_order_detail(request, id):
     return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def api_admin_users(request):
-    err = _staff_required(request)
-    if err: return err
-
     if request.method == 'GET':
         from django.contrib.auth.models import User as AuthUser
         users = AuthUser.objects.all().order_by('-date_joined')

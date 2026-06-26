@@ -1,14 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getCart, createOrder } from '@/lib/api';
-import type { Cart } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { getCart, createOrder, getProduct } from '@/lib/api';
+import type { Cart, CartItem } from '@/lib/api';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('productId');
+  const quantity = Math.max(Number(searchParams.get('quantity') || 1), 1);
   const [cart, setCart] = useState<Cart | null>(null);
+  const [directItem, setDirectItem] = useState<CartItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,21 +24,32 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    async function fetchCart() {
+    async function fetchCheckoutData() {
       try {
         setLoading(true);
-        const cartData = await getCart();
-        setCart(cartData);
+        if (productId) {
+          const product = await getProduct(productId);
+          setDirectItem({
+            id: 0,
+            product,
+            quantity,
+          });
+          setCart(null);
+        } else {
+          const cartData = await getCart();
+          setCart(cartData);
+          setDirectItem(null);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
         if (msg.includes('401')) { router.push('/login'); return; }
-        setError(msg || 'Impossible de charger le panier');
+        setError(msg || 'Impossible de charger la commande');
       } finally {
         setLoading(false);
       }
     }
-    fetchCart();
-  }, []);
+    fetchCheckoutData();
+  }, [productId, quantity, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -51,7 +66,10 @@ export default function CheckoutPage() {
 
     try {
       setSubmitting(true);
-      await createOrder(formData);
+      await createOrder({
+        ...formData,
+        ...(directItem ? { product_id: directItem.product.id, quantity: directItem.quantity } : {}),
+      });
       router.push('/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la commande');
@@ -70,11 +88,13 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!cart || cart.items.length === 0) {
+  const items = directItem ? [directItem] : cart?.items ?? [];
+
+  if (items.length === 0) {
     return (
       <div className="container mt-5">
         <h2 className="text-center fw-bold mb-4">Checkout</h2>
-        <div className="alert alert-info text-center">Votre panier est vide.</div>
+        <div className="alert alert-info text-center">Aucun produit à commander.</div>
         <div className="text-center mt-4">
           <Link href="/products" className="btn btn-primary">Continuer les achats</Link>
         </div>
@@ -82,7 +102,7 @@ export default function CheckoutPage() {
     );
   }
 
-  const total = cart.items.reduce((sum, i) => sum + i.quantity * i.product.price, 0);
+  const total = items.reduce((sum, i) => sum + i.quantity * i.product.price, 0);
 
   return (
     <div className="container mt-5" style={{ maxWidth: '800px' }}>
@@ -99,7 +119,7 @@ export default function CheckoutPage() {
             <div className="col-md-5">
               <h5 className="fw-bold mb-3">Résumé de la commande</h5>
               <div className="list-group list-group-flush mb-3">
-                {cart.items.map(item => (
+                {items.map(item => (
                   <div key={item.id} className="list-group-item px-0 d-flex justify-content-between">
                     <div>
                       <p className="mb-0 fw-semibold">{item.product.name}</p>
@@ -189,8 +209,8 @@ export default function CheckoutPage() {
                   {submitting ? 'Traitement...' : '✅ Confirmer la commande'}
                 </button>
 
-                <Link href="/cart" className="btn btn-outline-secondary w-100 mt-2">
-                  Retour au panier
+                <Link href={directItem ? `/products/${directItem.product.id}` : '/cart'} className="btn btn-outline-secondary w-100 mt-2">
+                  {directItem ? 'Retour au produit' : 'Retour au panier'}
                 </Link>
               </form>
             </div>
@@ -198,5 +218,19 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mt-5 text-center">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Chargement...</span>
+        </div>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }

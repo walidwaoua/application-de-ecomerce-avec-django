@@ -17,7 +17,7 @@ export default function AdminOrders() {
     adminApi.orders().then(r => setOrders(r.results)).finally(() => setLoading(false));
   }, []);
 
-  const toggle = async (order: AdminOrder, field: 'isPaid' | 'isDelivered' | 'is_validated') => {
+  const toggle = async (order: AdminOrder, field: 'isPaid' | 'isDelivered' | 'is_validated' | 'isCancelled') => {
     setUpdating(order.id);
     const updated = await adminApi.updateOrder(order.id, { [field]: !order[field] });
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...updated } : o));

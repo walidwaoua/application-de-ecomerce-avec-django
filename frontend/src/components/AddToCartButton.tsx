@@ -14,8 +14,8 @@ export function AddToCartButton({ productId, disabled }: AddToCartButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const errorTimeoutRef = useRef<NodeJS.Timeout>();
-  const successTimeoutRef = useRef<NodeJS.Timeout>();
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAddToCart = async () => {
     setError(null);

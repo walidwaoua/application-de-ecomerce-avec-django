@@ -3,6 +3,7 @@ export type Product = {
   name: string;
   image: string | null;
   description: string;
+  brand: string | null;
   category: string | null;
   price: number;
   countInStock: number;
